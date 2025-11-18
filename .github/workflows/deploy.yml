@@ -44,7 +44,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: 🐳 構建並推送到 Docker Hub
         uses: docker/build-push-action@v5
@@ -54,8 +54,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: ✅ Docker Hub 推送成功
         run: |
@@ -95,6 +95,11 @@ jobs:
 
       - name: 🚀 部署到 Azure Container Instances
         run: |
+          az container delete \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_CONTAINER_NAME }} \
+            --yes || true
+
           az container create \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_CONTAINER_NAME }} \
@@ -102,13 +107,13 @@ jobs:
             --registry-login-server ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io \
             --registry-username ${{ secrets.AZURE_REGISTRY_USERNAME }} \
             --registry-password ${{ secrets.AZURE_REGISTRY_PASSWORD }} \
-            --dns-name-label teacher-roster-${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --dns-name-label teacher-roster-app \
             --ports 3001 \
             --environment-variables \
               NODE_ENV=production \
               PORT=3001 \
               DB_HOST=${{ secrets.DB_HOST }} \
-              DB_PORT=${{ secrets.DB_PORT }} \
+              DB_PORT=3306 \
               DB_NAME=${{ secrets.DB_NAME }} \
               DB_USER=${{ secrets.DB_USER }} \
               DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
@@ -136,7 +141,7 @@ jobs:
   notify:
     name: 📢 部署通知
     runs-on: ubuntu-latest
-    needs: [build-and-push-dockerhub]
+    needs: [build-and-push-dockerhub, build-and-deploy-azure]
     if: always()
 
     steps:
@@ -146,9 +151,19 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **分支**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Hub**: ✅ 已推送" >> $GITHUB_STEP_SUMMARY
+
+          # Docker Hub 狀態
+          if [ "${{ needs.build-and-push-dockerhub.result }}" == "success" ]; then
+            echo "- **Docker Hub**: ✅ 已推送" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Docker Hub**: ❌ 失敗" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Azure 狀態
           if [ "${{ needs.build-and-deploy-azure.result }}" == "success" ]; then
             echo "- **Azure**: ✅ 已部署" >> $GITHUB_STEP_SUMMARY
-          else
+          elif [ "${{ needs.build-and-deploy-azure.result }}" == "skipped" ]; then
             echo "- **Azure**: ⏭️ 已跳過（未配置）" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Azure**: ❌ 失敗或未執行" >> $GITHUB_STEP_SUMMARY
           fi
