@@ -69,8 +69,8 @@ jobs:
   build-and-deploy-azure:
     name: ☁️ 構建並部署到 Azure
     runs-on: ubuntu-latest
-    # 只有在設置了 Azure secrets 時才運行
-    if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+    # 默認禁用，需要時請移除下面這行或改為 true
+    if: false
 
     steps:
       - name: 📥 檢出代碼
