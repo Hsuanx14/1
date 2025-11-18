@@ -10,11 +10,11 @@ RUN apk add --no-cache curl
 # 設定工作目錄
 WORKDIR /app
 
-# 複製 package.json 和 package-lock.json
+# 複製 package.json
 COPY package*.json ./
 
-# 安裝依賴
-RUN npm ci --only=production
+# 安裝依賴（使用 npm install 因為沒有 lock 文件）
+RUN npm install --omit=dev
 
 # 複製應用程式碼
 COPY . .
