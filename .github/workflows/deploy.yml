@@ -13,8 +13,7 @@ on:
 env:
   DOCKER_IMAGE_NAME: teacher-roster-backend
   AZURE_CONTAINER_NAME: teacher-roster-backend
-  # 設置 Docker Hub 用戶名（如果 secret 未設置）
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'hsuano216' }}
+  DOCKERHUB_USERNAME: hsuano216  # Docker Hub 用戶名（公開信息）
 
 jobs:
   # =====================================================
@@ -28,18 +27,14 @@ jobs:
       - name: 📥 檢出代碼
         uses: actions/checkout@v4
 
-      - name: 🔍 驗證 Secrets
+      - name: 🔍 驗證配置
         run: |
           echo "檢查 Docker Hub 配置..."
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "⚠️ 警告: DOCKERHUB_USERNAME secret 未設置"
-            echo "使用備用值: hsuano216"
-          else
-            echo "✅ DOCKERHUB_USERNAME 已設置"
-          fi
+          echo "✅ Docker Hub 用戶名: ${{ env.DOCKERHUB_USERNAME }}"
 
           if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
             echo "❌ 錯誤: DOCKERHUB_TOKEN secret 未設置"
+            echo "請前往 GitHub Settings > Secrets 設置 DOCKERHUB_TOKEN"
             exit 1
           else
             echo "✅ DOCKERHUB_TOKEN 已設置"
