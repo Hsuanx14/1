@@ -1,13 +1,18 @@
-# 🎓 教師排課管理系統 - 三層式架構版本
+# 🎓 教師排課管理系統 - Azure + Docker 全自動部署版本
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-blue.svg)](https://www.mysql.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
+[![Azure](https://img.shields.io/badge/Azure-Supported-0078D4.svg)](https://azure.microsoft.com/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF.svg)](https://github.com/features/actions)
+
+> 🚀 **現已支持 GitHub Actions 自動部署！** 推送代碼即可自動構建並部署到 Docker Hub 和 Azure。
 
 ## 📋 目錄
 
 - [專案簡介](#專案簡介)
+- [🚀 自動部署（NEW）](#-自動部署)
 - [核心功能](#核心功能)
 - [技術架構](#技術架構)
 - [快速開始](#快速開始)
@@ -35,6 +40,76 @@
 | **併發控制** | 無 | 樂觀鎖 (version 欄位) |
 | **操作日誌** | 無 | 完整的 audit_logs |
 | **部署** | 手動更新 | Docker / Azure App Service |
+| **CI/CD** | 無 | GitHub Actions 自動部署 |
+
+---
+
+## 🚀 自動部署
+
+### 快速開始
+
+推送代碼即可自動部署到 Docker Hub 和 Azure！
+
+```bash
+# 推送代碼到 GitHub
+git push origin main
+
+# 自動觸發：
+# ✅ 構建 Docker 映像檔
+# ✅ 推送到 Docker Hub
+# ✅ 部署到 Azure（可選）
+```
+
+### 支援的部署方式
+
+#### 1️⃣ Docker Hub（免費）
+- **功能**: 自動構建並推送 Docker 映像檔
+- **成本**: 免費
+- **用途**: 開發測試、手動部署
+
+#### 2️⃣ Azure Container Instances（付費）
+- **功能**: 全自動部署到 Azure 雲端
+- **成本**: 約 NT$350-550/月
+- **用途**: 生產環境
+
+### 設置指南
+
+詳細設置步驟請參考：**[CI_CD_SETUP.md](./CI_CD_SETUP.md)**
+
+**快速設置清單：**
+
+<details>
+<summary>📦 Docker Hub 設置（必需）</summary>
+
+1. 創建 [Docker Hub](https://hub.docker.com/) 帳號
+2. 生成 Access Token
+3. 在 GitHub 設置 Secrets：
+   - `DOCKERHUB_USERNAME`: 您的 Docker Hub 用戶名
+   - `DOCKERHUB_TOKEN`: Access Token
+4. 推送代碼測試
+
+</details>
+
+<details>
+<summary>☁️ Azure 自動部署設置（可選）</summary>
+
+1. 創建 Azure Container Registry
+2. 創建 Service Principal
+3. 在 GitHub 設置 Secrets（參考 CI_CD_SETUP.md）
+4. 推送代碼自動部署
+
+</details>
+
+### 使用自動構建的映像檔
+
+```bash
+# 拉取最新映像檔
+docker pull 您的用戶名/teacher-roster-backend:latest
+
+# 運行容器
+docker run -d -p 3001:3001 --env-file .env \
+  您的用戶名/teacher-roster-backend:latest
+```
 
 ---
 
