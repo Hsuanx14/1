@@ -13,6 +13,8 @@ on:
 env:
   DOCKER_IMAGE_NAME: teacher-roster-backend
   AZURE_CONTAINER_NAME: teacher-roster-backend
+  # 設置 Docker Hub 用戶名（如果 secret 未設置）
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'hsuano216' }}
 
 jobs:
   # =====================================================
@@ -26,10 +28,27 @@ jobs:
       - name: 📥 檢出代碼
         uses: actions/checkout@v4
 
+      - name: 🔍 驗證 Secrets
+        run: |
+          echo "檢查 Docker Hub 配置..."
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            echo "⚠️ 警告: DOCKERHUB_USERNAME secret 未設置"
+            echo "使用備用值: hsuano216"
+          else
+            echo "✅ DOCKERHUB_USERNAME 已設置"
+          fi
+
+          if [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "❌ 錯誤: DOCKERHUB_TOKEN secret 未設置"
+            exit 1
+          else
+            echo "✅ DOCKERHUB_TOKEN 已設置"
+          fi
+
       - name: 🔐 登入 Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: 🏗️ 設置 Docker Buildx
@@ -39,7 +58,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}
+          images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -60,7 +79,7 @@ jobs:
       - name: ✅ Docker Hub 推送成功
         run: |
           echo "🎉 映像檔已成功推送到 Docker Hub！"
-          echo "📦 映像檔: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}"
+          echo "📦 映像檔: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}"
           echo "🏷️ 標籤: ${{ steps.meta.outputs.tags }}"
 
   # =====================================================
