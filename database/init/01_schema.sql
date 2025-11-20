@@ -56,8 +56,9 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`teacher_id`) REFERENCES `teachers`(`id`) ON DELETE CASCADE,
   INDEX `idx_date` (`date`),
-  INDEX `idx_teacher_date` (`teacher_id`, `date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  INDEX `idx_teacher_date` (`teacher_id`, `date`),
+  UNIQUE KEY `unique_teacher_schedule` (`teacher_id`, `date`, `shift_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教師排班表 - 防止同一教師在同一天同一時段重複排班';
 
 -- =====================================================
 -- 課程表
@@ -86,7 +87,8 @@ CREATE TABLE IF NOT EXISTS `course_assignments` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`course_id`) REFERENCES `courses`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`teacher_id`) REFERENCES `teachers`(`id`) ON DELETE CASCADE,
-  INDEX `idx_semester_year` (`semester`, `year`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  INDEX `idx_semester_year` (`semester`, `year`),
+  UNIQUE KEY `unique_course_assignment` (`course_id`, `teacher_id`, `semester`, `year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='課程分配表 - 防止同一教師在同一學期重複分配到同一課程';
 
 SET FOREIGN_KEY_CHECKS = 1;
