@@ -1,0 +1,130 @@
+version: '3.8'
+
+# =====================================================
+# Docker Compose 配置 - 本地開發版本
+# =====================================================
+# 使用說明：
+# 1. 複製 .env.example 為 .env
+# 2. 執行：docker-compose up -d
+# 3. 資料庫會自動初始化 schema 和測試資料
+# =====================================================
+
+services:
+  # ===================================================
+  # MySQL 資料庫服務
+  # ===================================================
+  mysql:
+    image: mysql:8.0
+    container_name: teacher-roster-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-teacher_roster}
+      MYSQL_USER: ${DB_USER:-roster_admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-roster_password}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      # 資料庫初始化腳本（自動執行）
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      # 資料持久化
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "com.teacher-roster.service=database"
+      - "com.teacher-roster.environment=development"
+
+  # ===================================================
+  # 後端 API 服務
+  # ===================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: teacher-roster-backend
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-roster_admin}
+      - DB_PASSWORD=${DB_PASSWORD:-roster_password}
+      - DB_NAME=${DB_NAME:-teacher_roster}
+      - DB_SSL_MODE=DISABLED
+      - PORT=${PORT:-3001}
+    volumes:
+      # 日誌目錄
+      - ./logs:/app/logs
+      # 上傳檔案
+      - ./uploads:/app/uploads
+      # 開發模式：掛載源碼（可選）
+      # - ./backend/src:/app/src
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${PORT:-3001}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.teacher-roster.service=backend"
+      - "com.teacher-roster.environment=development"
+
+  # ===================================================
+  # 前端服務（可選，暫時註解）
+  # ===================================================
+  # frontend:
+  #   build:
+  #     context: ./frontend-new
+  #     dockerfile: Dockerfile
+  #   container_name: teacher-roster-frontend
+  #   ports:
+  #     - "5173:80"
+  #   environment:
+  #     - VITE_API_URL=http://localhost:3001/api
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+  #   depends_on:
+  #     - backend
+
+networks:
+  app-network:
+    driver: bridge
+    name: teacher-roster-network
+
+volumes:
+  mysql-data:
+    driver: local
+    name: teacher-roster-mysql-data
+
+# =====================================================
+# 常用指令
+# =====================================================
+# 啟動所有服務：        docker-compose up -d
+# 查看日誌：            docker-compose logs -f
+# 查看後端日誌：        docker-compose logs -f backend
+# 查看資料庫日誌：      docker-compose logs -f mysql
+# 停止所有服務：        docker-compose down
+# 停止並刪除資料：      docker-compose down -v
+# 重新建置：            docker-compose up -d --build
+# 進入資料庫：          docker-compose exec mysql mysql -u roster_admin -p teacher_roster
+# 進入後端容器：        docker-compose exec backend sh
+# =====================================================
